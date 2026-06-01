@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8" />
+<title>Search Wireframes — v1</title>
+<style>
+  :root{
+    --ink:#111;
+    --line:#111;
+    --muted:#666;
+    --bg:#f4f4f4;
+    --card:#fff;
+    --fill:#e6e6e6;
+    --fill2:#d4d4d4;
+    --accent:#000;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"SF Mono",ui-monospace,Menlo,monospace;
+    font-size:13px;line-height:1.35}
+  .page{max-width:1240px;margin:0 auto;padding:32px}
+  h1{font-size:18px;letter-spacing:.5px;margin:0 0 4px;text-transform:uppercase}
+  h2{font-size:14px;margin:48px 0 12px;letter-spacing:.5px;text-transform:uppercase;
+     border-bottom:1px dashed var(--line);padding-bottom:6px}
+  .lede{color:var(--muted);margin:0 0 24px}
+  .note{color:var(--muted);font-size:11px;margin-top:6px}
+
+  /* Frame chrome */
+  .frame{background:var(--card);border:1px solid var(--line);margin-bottom:8px}
+  .frame .bar{display:flex;align-items:center;gap:6px;padding:8px 12px;
+    border-bottom:1px solid var(--line);background:#fafafa;font-size:11px;color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;border:1px solid var(--line)}
+  .frame .label{margin-left:auto;text-transform:uppercase;letter-spacing:1px}
+  .frame .body{padding:0}
+
+  /* Top nav (placeholder) */
+  .nav{display:flex;gap:24px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line)}
+  .logo{width:96px;height:14px;background:var(--fill)}
+  .navlinks{display:flex;gap:16px;color:var(--muted)}
+  .navlinks span{padding:4px 0}
+  .navright{margin-left:auto;display:flex;gap:10px;color:var(--muted)}
+
+  /* Search input */
+  .searchwrap{padding:20px;border-bottom:1px solid var(--line);background:#fff;position:relative}
+  .search{display:flex;align-items:center;gap:10px;border:1.5px solid var(--ink);
+    padding:10px 14px;background:#fff}
+  .search .icon{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:50%;position:relative}
+  .search .icon::after{content:"";position:absolute;right:-5px;bottom:-5px;width:6px;height:1.5px;
+    background:var(--ink);transform:rotate(45deg)}
+  .search input,.search .qtext{flex:1;border:0;outline:0;font:inherit;font-size:14px;background:transparent}
+  .qtext{color:var(--ink)}
+  .caret{display:inline-block;width:1px;height:14px;background:var(--ink);
+    animation:blink 1s steps(1) infinite;vertical-align:middle;margin-left:1px}
+  @keyframes blink{50%{opacity:0}}
+  .kbd{border:1px solid var(--line);padding:1px 6px;border-radius:3px;font-size:10px;color:var(--muted);background:#fafafa}
+
+  /* Dropdown */
+  .dd{border:1px solid var(--line);border-top:0;background:#fff;margin:0 20px}
+  .dd .sec{border-top:1px solid #e0e0e0}
+  .dd .sec:first-child{border-top:0}
+  .sechead{display:flex;justify-content:space-between;padding:8px 14px;
+    font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;background:#fafafa}
+  .row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid #f0f0f0;cursor:pointer}
+  .row:first-child{border-top:0}
+  .row.focused{background:#f0f0f0;border-left:3px solid var(--ink);padding-left:11px}
+  .thumb{width:28px;height:36px;background:var(--fill);border:1px solid #ccc;flex-shrink:0}
+  .avatar{width:28px;height:28px;border-radius:50%;background:var(--fill);border:1px solid #ccc;flex-shrink:0}
+  .tag{width:28px;height:28px;background:#fff;border:1px solid var(--line);display:flex;
+    align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .rowmain{flex:1;min-width:0}
+  .rowtitle{font-weight:600;font-size:13px}
+  .rowmeta{color:var(--muted);font-size:11px;margin-top:2px}
+  .rowaction{color:var(--muted);font-size:11px;display:flex;align-items:center;gap:6px}
+
+  /* Top hit row variant */
+  .tophit{background:#fafafa;border-left:3px solid var(--ink);padding:14px;display:flex;gap:14px}
+  .tophit .thumb{width:48px;height:64px}
+  .tophit .badge{display:inline-block;border:1px solid var(--ink);padding:1px 6px;
+    font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+
+  .ddfooter{display:flex;gap:0;border-top:1px solid var(--line);background:#fafafa}
+  .ddfooter > div{flex:1;padding:10px 14px;display:flex;align-items:center;gap:8px;
+    border-right:1px solid #e0e0e0;font-size:12px}
+  .ddfooter > div:last-child{border-right:0}
+  .ddfooter .primary{font-weight:600}
+
+  /* Callouts */
+  .callout{position:absolute;font-size:10px;color:var(--muted);
+    background:#fffce8;border:1px dashed #b8a700;padding:3px 6px;white-space:nowrap;z-index:2}
+
+  /* SRP layout */
+  .srphdr{padding:16px 20px;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+  .srphdr .counts{color:var(--muted);font-size:11px}
+  .sortsel{border:1px solid var(--line);padding:6px 10px;font-size:12px;background:#fff}
+
+  .intentstrip{padding:12px 20px;border-bottom:1px solid var(--line);background:#fafafa;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .intentstrip .pill{border:1.5px solid var(--ink);padding:6px 12px;font-size:12px;background:#fff}
+  .intentstrip .pill.ghost{background:transparent}
+
+  .srpgrid{display:grid;grid-template-columns:220px 1fr;gap:0}
+  .rail{border-right:1px solid var(--line);padding:16px 20px}
+  .rail h4{margin:0 0 6px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+  .rail .group{margin-bottom:18px}
+  .facet{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;color:#333}
+  .check{width:12px;height:12px;border:1px solid var(--line);flex-shrink:0}
+  .count{margin-left:auto;color:var(--muted);font-size:11px}
+
+  .results{padding:16px 20px}
+  .strip{margin-bottom:24px}
+  .stripheader{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .stripheader h3{margin:0;font-size:12px;letter-spacing:1.5px;text-transform:uppercase}
+  .seeall{font-size:11px;color:var(--muted)}
+
+  .topicrow{display:flex;gap:10px;overflow:hidden}
+  .topiccard{border:1px solid var(--line);padding:10px 12px;flex:1;min-width:0;background:#fff}
+  .topiccard .h{font-weight:600;font-size:12px}
+  .topiccard .m{font-size:10px;color:var(--muted);margin-top:2px}
+
+  .authrow{display:flex;gap:14px}
+  .authcard{text-align:center;width:80px}
+  .authcard .avatar{width:48px;height:48px;margin:0 auto 4px}
+  .authcard .h{font-size:11px;font-weight:600;line-height:1.2}
+  .authcard .m{font-size:10px;color:var(--muted)}
+
+  .booklist{border:1px solid var(--line);background:#fff}
+  .bookrow{display:flex;gap:14px;padding:12px;border-bottom:1px solid #eee;align-items:center}
+  .bookrow:last-child{border-bottom:0}
+  .bookrow .thumb{width:44px;height:60px}
+  .bookrow .meta{flex:1}
+  .bookrow .title{font-weight:600}
+  .bookrow .sub{color:var(--muted);font-size:11px;margin-top:2px}
+  .bookrow .price{font-weight:600;font-size:13px;margin-left:auto}
+  .pager{padding:14px;text-align:center;color:var(--muted);font-size:11px;border-top:1px solid #eee}
+
+  /* Learning path module */
+  .lpath{border:1.5px solid var(--ink);padding:16px;margin-bottom:24px;background:#fff;position:relative}
+  .lpath .tag-l{position:absolute;top:-9px;left:12px;background:#fff;padding:0 6px;
+    font-size:10px;letter-spacing:1.5px;text-transform:uppercase}
+  .steps{display:flex;gap:10px;margin-top:10px}
+  .step{flex:1;border:1px dashed var(--line);padding:10px;font-size:11px}
+  .step .n{font-weight:700;display:block;margin-bottom:4px;font-size:10px;color:var(--muted)}
+
+  /* Mobile */
+  .mobile-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+  .phone{width:340px;border:2px solid var(--ink);border-radius:24px;overflow:hidden;background:#fff}
+  .phone .notch{height:22px;background:#fafafa;display:flex;justify-content:center;align-items:center;
+    font-size:10px;color:var(--muted);border-bottom:1px solid #eee}
+  .phone .pscreen{height:560px;overflow:hidden;display:flex;flex-direction:column}
+  .moverlay-hd{display:flex;gap:10px;padding:10px;border-bottom:1px solid var(--line);align-items:center}
+  .moverlay-hd .search{flex:1;padding:8px 10px}
+  .mcancel{font-size:12px;color:var(--muted)}
+  .msheet{position:relative}
+  .mfilterbtn{display:flex;align-items:center;gap:6px;border:1px solid var(--line);
+    padding:6px 10px;font-size:12px;background:#fff}
+  .stickyfoot{margin-top:auto;border-top:1px solid var(--line);background:#fafafa;
+    display:flex}
+  .stickyfoot > div{flex:1;padding:12px;text-align:center;font-size:12px;border-right:1px solid #e0e0e0}
+  .stickyfoot > div:last-child{border-right:0}
+
+  /* Legend */
+  .legend{display:flex;gap:18px;color:var(--muted);font-size:11px;margin-top:8px;flex-wrap:wrap}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .lswatch{width:14px;height:14px;border:1px solid var(--line)}
+
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  .empty .big{font-size:14px;color:var(--ink);margin-bottom:8px}
+  .empty .sugg{margin-top:14px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);padding:4px 10px;font-size:11px;background:#fff}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Search Wireframes — v1</h1>
+  <p class="lede">Manning-style technical bookstore. Wireframe fidelity — no visual polish. Annotations in yellow.</p>
+  <div class="legend">
+    <span><span class="lswatch" style="background:#e6e6e6"></span> image / cover placeholder</span>
+    <span><span class="lswatch" style="background:#fafafa"></span> meta / section header</span>
+    <span><span class="lswatch" style="background:#fffce8;border-color:#b8a700;border-style:dashed"></span> designer note</span>
+    <span><span class="lswatch" style="background:#f0f0f0;border-left:3px solid #111"></span> focused / selected</span>
+  </div>
+
+  <!-- =========================================== -->
+  <!-- FRAME 1 — AUTOCOMPLETE (DESKTOP)            -->
+  <!-- =========================================== -->
+  <h2>Frame 1 · Autocomplete — desktop · query: "python"</h2>
+  <div class="frame">
+    <div class="bar">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span>manning.example / dropdown open</span>
+      <span class="label">1 / 4</span>
+    </div>
+    <div class="body">
+
+      <div class="nav">
+        <div class="logo"></div>
+        <div class="navlinks"><span>Books</span><span>Topics</span><span>Authors</span><span>For teams</span></div>
+        <div class="navright"><span>Cart</span><span>Account</span></div>
+      </div>
+
+      <div class="searchwrap">
+        <div class="search">
+          <span class="icon"></span>
+          <span class="qtext">python<span class="caret"></span></span>
+          <span class="kbd">⌘K</span>
+        </div>
+
+        <div class="callout" style="top:18px;right:24px">debounced 120ms · cancels in-flight</div>
+      </div>
+
+      <div class="dd" style="margin-top:-1px;position:relative">
+        <div class="callout" style="top:-22px;left:0">role="listbox" · aria-activedescendant</div>
+
+        <div class="sec">
+          <div class="tophit">
+            <div class="thumb"></div>
+            <div class="rowmain">
+              <span class="badge">Top hit · navigational</span>
+              <div class="rowtitle">Learn Python, 3rd Edition</div>
+              <div class="rowmeta">Eric Matthes · 2023 · Beginner · 552 pp</div>
+            </div>
+            <div class="rowaction"><span class="kbd">↵</span> Open book</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sechead"><span>Books</span><span>4 of 312</span></div>
+          <div class="row focused" id="ac-row-1">
+            <div class="thumb"></div>
+            <div class="rowmain">
+              <div class="rowtitle">Learn Python the Hard Way</div>
+              <div class="rowmeta">Zed Shaw · 2017</div>
+            </div>
+            <div class="rowaction"><span class="kbd">↵</span></div>
+          </div>
+          <div class="row">
+            <div class="thumb"></div>
+            <div class="rowmain">
+              <div class="rowtitle">Learning Python</div>
+              <div class="rowmeta">Mark Lutz · O'Reilly · 2013</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="thumb"></div>
+            <div class="rowmain">
+              <div class="rowtitle">Python Crash Course</div>
+              <div class="rowmeta">Eric Matthes · 2019</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="thumb"></div>
+            <div class="rowmain">
+              <div class="rowtitle">Fluent Python</div>
+              <div class="rowmeta">Luciano Ramalho · 2022 · Advanced</div>
+            </div>
+          </div>
+          <div class="row" style="color:var(--muted);font-size:12px">
+            <div style="width:28px"></div>
+            <div class="rowmain">→ See all 312 books for "python"</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sechead"><span>Authors</span><span>3 of 14</span></div>
+          <div class="row">
+            <div class="avatar"></div>
+            <div class="rowmain"><div class="rowtitle">Eric Matthes</div><div class="rowmeta">4 books · Beginner Python</div></div>
+          </div>
+          <div class="row">
+            <div class="avatar"></div>
+            <div class="rowmain"><div class="rowtitle">Mark Lutz</div><div class="rowmeta">6 books</div></div>
+          </div>
+          <div class="row">
+            <div class="avatar"></div>
+            <div class="rowmain"><div class="rowtitle">Luciano Ramalho</div><div class="rowmeta">2 books · Advanced</div></div>
+          </div>
+        </div>
+
+        <div class="sec" style="position:relative">
+          <div class="callout" style="top:6px;right:14px">curated taxonomy · prefix match wins</div>
+          <div class="sechead"><span>Topics</span><span>3 of 6</span></div>
+          <div class="row">
+            <div class="tag">#</div>
+            <div class="rowmain"><div class="rowtitle">Python</div><div class="rowmeta">312 books · Programming languages</div></div>
+          </div>
+          <div class="row">
+            <div class="tag">#</div>
+            <div class="rowmain"><div class="rowtitle">Python for Data Science</div><div class="rowmeta">84 books</div></div>
+          </div>
+          <div class="row">
+            <div class="tag">#</div>
+            <div class="rowmain"><div class="rowtitle">Django</div><div class="rowmeta">41 books · Web frameworks</div></div>
+          </div>
+        </div>
+
+        <div class="ddfooter">
+          <div><span>💬</span><span>Ask AI: "how to learn python"</span></div>
+          <div class="primary"><span>🔍</span><span>Search all results for "python"</span><span class="kbd" style="margin-left:auto">↵</span></div>
+        </div>
+      </div>
+
+      <div style="padding:16px 20px;color:var(--muted);font-size:11px">
+        Keyboard: ↑↓ across all rows (skips headers) · ⌘+↵ forces SRP even with Top Hit · Esc closes · ⌘K from anywhere
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================== -->
+  <!-- FRAME 2 — AUTOCOMPLETE EMPTY / LEARNING     -->
+  <!-- =========================================== -->
+  <h2>Frame 2 · Autocomplete — learning intent + empty fallback</h2>
+  <div class="frame">
+    <div class="bar">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span>query: "how to learn python for kids"</span>
+      <span class="label">2 / 4</span>
+    </div>
+    <div class="body">
+      <div class="searchwrap">
+        <div class="search">
+          <span class="icon"></span>
+          <span class="qtext">how to learn python for kids<span class="caret"></span></span>
+        </div>
+        <div class="callout" style="top:18px;right:24px">classifier → LEARNING (question + "for X")</div>
+      </div>
+
+      <div class="dd" style="margin-top:-1px">
+        <div class="sec">
+          <div class="sechead"><span>Books · weak match</span><span>2 of 8</span></div>
+          <div class="row">
+            <div class="thumb"></div>
+            <div class="rowmain"><div class="rowtitle">Python for Kids</div><div class="rowmeta">Jason Briggs · 2012 · Beginner · ages 10+</div></div>
+          </div>
+          <div class="row">
+            <div class="thumb"></div>
+            <div class="rowmain"><div class="rowtitle">Hello World! Computer Programming for Kids</div><div class="rowmeta">Sande · 2019</div></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sechead"><span>Topics</span></div>
+          <div class="row">
+            <div class="tag">#</div>
+            <div class="rowmain"><div class="rowtitle">Python for beginners</div><div class="rowmeta">142 books · Learning paths available</div></div>
+          </div>
+        </div>
+
+        <div class="ddfooter">
+          <div class="primary" style="background:#fff;border:2px solid var(--ink)"><span>💬</span><span>Ask AI: "how to learn python for kids"</span><span class="kbd" style="margin-left:auto">↵</span></div>
+          <div><span>🔍</span><span>Search books</span></div>
+        </div>
+      </div>
+
+      <div style="padding:18px 20px;border-top:1px solid #eee;color:var(--muted);font-size:11px">
+        ▲ Learning intent: AI CTA is promoted to primary. Books section labelled "weak match" — honest signal.
+      </div>
+
+      <!-- empty state -->
+      <div style="border-top:1px dashed var(--line);background:#fafafa">
+        <div style="padding:10px 20px;font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase">
+          Same component · no-results variant · query: "phyton 3.99"
+        </div>
+        <div class="dd" style="margin:0 20px 20px">
+          <div class="empty">
+            <div class="big">No matches for "phyton 3.99"</div>
+            <div>Did you mean:</div>
+            <div class="sugg">
+              <span class="chip">python 3.9</span>
+              <span class="chip">python</span>
+              <span class="chip">python crash course</span>
+            </div>
+          </div>
+          <div class="ddfooter">
+            <div class="primary"><span>💬</span><span>Ask AI about "phyton 3.99"</span></div>
+            <div><span>📚</span><span>Browse all books</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================== -->
+  <!-- FRAME 3 — SRP, EXPLORATORY                  -->
+  <!-- =========================================== -->
+  <h2>Frame 3 · Search Results Page — exploratory · query: "python"</h2>
+  <div class="frame">
+    <div class="bar">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span>/search?q=python</span>
+      <span class="label">3 / 4</span>
+    </div>
+    <div class="body">
+      <div class="nav">
+        <div class="logo"></div>
+        <div class="navlinks"><span>Books</span><span>Topics</span><span>Authors</span><span>For teams</span></div>
+        <div class="navright"><span>Cart</span><span>Account</span></div>
+      </div>
+
+      <div class="searchwrap" style="padding:12px 20px">
+        <div class="search" style="padding:8px 12px">
+          <span class="icon"></span>
+          <span class="qtext">python</span>
+        </div>
+      </div>
+
+      <div class="srphdr">
+        <div>
+          <div style="font-size:16px;font-weight:600">Results for "python"</div>
+          <div class="counts">312 books · 14 authors · 6 topics</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="counts">Sort:</span>
+          <div class="sortsel">Relevance ▾</div>
+        </div>
+      </div>
+
+      <div class="intentstrip" style="position:relative">
+        <div class="callout" style="top:-22px;left:14px">renders only when classifier confidence ≥ 0.6</div>
+        <strong style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase">Looking to learn?</strong>
+        <div class="pill">📚 Python learning path</div>
+        <div class="pill ghost">💬 Ask AI</div>
+      </div>
+
+      <div class="srpgrid">
+        <aside class="rail">
+          <div class="group">
+            <h4>Level</h4>
+            <div class="facet"><div class="check"></div>Beginner<span class="count">142</span></div>
+            <div class="facet"><div class="check"></div>Intermediate<span class="count">98</span></div>
+            <div class="facet"><div class="check"></div>Advanced<span class="count">72</span></div>
+          </div>
+          <div class="group">
+            <h4>Format</h4>
+            <div class="facet"><div class="check"></div>Print<span class="count">280</span></div>
+            <div class="facet"><div class="check"></div>eBook<span class="count">312</span></div>
+            <div class="facet"><div class="check"></div>liveBook<span class="count">211</span></div>
+          </div>
+          <div class="group">
+            <h4>Topic</h4>
+            <div class="facet"><div class="check"></div>Data Science<span class="count">84</span></div>
+            <div class="facet"><div class="check"></div>Web<span class="count">61</span></div>
+            <div class="facet"><div class="check"></div>Django<span class="count">41</span></div>
+            <div class="facet"><div class="check"></div>Machine Learning<span class="count">38</span></div>
+            <div class="facet"><div class="check"></div>Automation<span class="count">22</span></div>
+          </div>
+          <div class="group">
+            <h4>Year</h4>
+            <div class="facet"><div class="check"></div>2024+<span class="count">41</span></div>
+            <div class="facet"><div class="check"></div>2020-2023<span class="count">128</span></div>
+            <div class="facet"><div class="check"></div>Older<span class="count">143</span></div>
+          </div>
+        </aside>
+
+        <div class="results">
+
+          <div class="strip" style="position:relative">
+            <div class="callout" style="top:-18px;right:0">topics & authors above books → fast pivot for broad queries</div>
+            <div class="stripheader">
+              <h3>Topics · 6</h3>
+              <a class="seeall">See all →</a>
+            </div>
+            <div class="topicrow">
+              <div class="topiccard"><div class="h"># Python</div><div class="m">312 books</div></div>
+              <div class="topiccard"><div class="h"># Data Science</div><div class="m">84 books</div></div>
+              <div class="topiccard"><div class="h"># Django</div><div class="m">41 books</div></div>
+              <div class="topiccard"><div class="h"># ML</div><div class="m">38 books</div></div>
+              <div class="topiccard"><div class="h"># Automation</div><div class="m">22 books</div></div>
+            </div>
+          </div>
+
+          <div class="strip">
+            <div class="stripheader">
+              <h3>Authors · 14</h3>
+              <a class="seeall">See all →</a>
+            </div>
+            <div class="authrow">
+              <div class="authcard"><div class="avatar"></div><div class="h">Eric Matthes</div><div class="m">4 books</div></div>
+              <div class="authcard"><div class="avatar"></div><div class="h">Mark Lutz</div><div class="m">6 books</div></div>
+              <div class="authcard"><div class="avatar"></div><div class="h">L. Ramalho</div><div class="m">2 books</div></div>
+              <div class="authcard"><div class="avatar"></div><div class="h">Wes McKinney</div><div class="m">3 books</div></div>
+              <div class="authcard"><div class="avatar"></div><div class="h">Al Sweigart</div><div class="m">5 books</div></div>
+            </div>
+          </div>
+
+          <div class="strip">
+            <div class="stripheader">
+              <h3>Books · 304</h3>
+              <a class="seeall">Compare · Save search</a>
+            </div>
+            <div class="booklist">
+              <div class="bookrow">
+                <div class="thumb"></div>
+                <div class="meta">
+                  <div class="title">Learn Python, 3rd Edition</div>
+                  <div class="sub">Eric Matthes · 2023 · Beginner · 552 pp · Print + eBook</div>
+                </div>
+                <div class="price">$39.99</div>
+              </div>
+              <div class="bookrow">
+                <div class="thumb"></div>
+                <div class="meta">
+                  <div class="title">Python Crash Course</div>
+                  <div class="sub">Eric Matthes · 2019 · Beginner</div>
+                </div>
+                <div class="price">$34.99</div>
+              </div>
+              <div class="bookrow">
+                <div class="thumb"></div>
+                <div class="meta">
+                  <div class="title">Fluent Python</div>
+                  <div class="sub">Luciano Ramalho · 2022 · Advanced · 1014 pp</div>
+                </div>
+                <div class="price">$59.99</div>
+              </div>
+              <div class="bookrow">
+                <div class="thumb"></div>
+                <div class="meta">
+                  <div class="title">Python for Data Analysis</div>
+                  <div class="sub">Wes McKinney · 2022 · Intermediate</div>
+                </div>
+                <div class="price">$44.99</div>
+              </div>
+              <div class="bookrow">
+                <div class="thumb"></div>
+                <div class="meta">
+                  <div class="title">Automate the Boring Stuff with Python</div>
+                  <div class="sub">Al Sweigart · 2019 · Beginner</div>
+                </div>
+                <div class="price">$29.99</div>
+              </div>
+              <div class="pager">Showing 5 of 304 · Load more</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================== -->
+  <!-- FRAME 4 — SRP LEARNING + MOBILE             -->
+  <!-- =========================================== -->
+  <h2>Frame 4 · SRP — learning intent variant &amp; Mobile</h2>
+
+  <div class="frame">
+    <div class="bar">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span>/search?q=how+to+learn+python+for+data+science</span>
+      <span class="label">4a / 4</span>
+    </div>
+    <div class="body">
+      <div class="srphdr">
+        <div>
+          <div style="font-size:16px;font-weight:600">Results for "how to learn python for data science"</div>
+          <div class="counts">84 books · 5 authors · 1 learning path</div>
+        </div>
+        <div class="sortsel">Sort: Best for learners ▾</div>
+      </div>
+
+      <div style="padding:16px 20px 0">
+        <div class="lpath">
+          <span class="tag-l">Learning path · auto-suggested</span>
+          <div style="font-weight:600;font-size:14px">Python → Data Science · 4-step path</div>
+          <div class="counts" style="margin-top:2px">~120 hours · Beginner → Intermediate</div>
+          <div class="steps">
+            <div class="step"><span class="n">STEP 1</span>Python Crash Course<br><span style="color:var(--muted)">Matthes · Beginner</span></div>
+            <div class="step"><span class="n">STEP 2</span>Automate the Boring Stuff<br><span style="color:var(--muted)">Sweigart</span></div>
+            <div class="step"><span class="n">STEP 3</span>Python for Data Analysis<br><span style="color:var(--muted)">McKinney</span></div>
+            <div class="step"><span class="n">STEP 4</span>Data Science from Scratch<br><span style="color:var(--muted)">Grus</span></div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <div class="pill" style="border:1.5px solid var(--ink);padding:6px 12px;font-size:12px;background:#fff">Start this path</div>
+            <div class="pill ghost" style="border:1.5px solid var(--ink);padding:6px 12px;font-size:12px;background:transparent">💬 Ask AI to customize</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:0 20px 20px;color:var(--muted);font-size:11px;position:relative">
+        <div class="callout" style="position:static;display:inline-block;margin-bottom:8px">▲ Learning intent reshapes SRP: path module replaces topics/authors strip · books below are pre-filtered to Beginner+Intermediate</div>
+        <div style="height:120px;border:1px dashed #bbb;display:flex;align-items:center;justify-content:center">
+          [ Filtered book list — same component as Frame 3, level=Beginner+Intermediate pre-applied ]
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile -->
+  <div class="frame">
+    <div class="bar">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span>mobile · 375pt · autocomplete + SRP</span>
+      <span class="label">4b / 4</span>
+    </div>
+    <div class="body" style="padding:24px;background:#f4f4f4">
+      <div class="mobile-wrap">
+
+        <!-- Phone 1: autocomplete full-screen overlay -->
+        <div class="phone">
+          <div class="notch">9:41 · ▮▮▮▮ ▾</div>
+          <div class="pscreen">
+            <div class="moverlay-hd">
+              <div class="search"><span class="icon"></span><span class="qtext">python<span class="caret"></span></span></div>
+              <span class="mcancel">Cancel</span>
+            </div>
+            <div style="overflow:auto;flex:1">
+              <div class="sechead"><span>Top hit</span></div>
+              <div class="tophit" style="padding:10px">
+                <div class="thumb" style="width:36px;height:48px"></div>
+                <div class="rowmain">
+                  <span class="badge">Open book</span>
+                  <div class="rowtitle">Learn Python, 3rd Ed.</div>
+                  <div class="rowmeta">Eric Matthes</div>
+                </div>
+              </div>
+              <div class="sechead"><span>Books · 3</span></div>
+              <div class="row"><div class="thumb"></div><div class="rowmain"><div class="rowtitle">Learn Python the Hard Way</div><div class="rowmeta">Zed Shaw</div></div></div>
+              <div class="row"><div class="thumb"></div><div class="rowmain"><div class="rowtitle">Python Crash Course</div><div class="rowmeta">Matthes · 2019</div></div></div>
+              <div class="row"><div class="thumb"></div><div class="rowmain"><div class="rowtitle">Fluent Python</div><div class="rowmeta">Ramalho · Advanced</div></div></div>
+              <div class="sechead"><span>Authors · 2</span></div>
+              <div class="row"><div class="avatar"></div><div class="rowmain"><div class="rowtitle">Eric Matthes</div><div class="rowmeta">4 books</div></div></div>
+              <div class="row"><div class="avatar"></div><div class="rowmain"><div class="rowtitle">Mark Lutz</div><div class="rowmeta">6 books</div></div></div>
+              <div class="sechead"><span>Topics · 2</span></div>
+              <div class="row"><div class="tag">#</div><div class="rowmain"><div class="rowtitle">Python</div><div class="rowmeta">312 books</div></div></div>
+              <div class="row"><div class="tag">#</div><div class="rowmain"><div class="rowtitle">Django</div><div class="rowmeta">41 books</div></div></div>
+            </div>
+            <div class="stickyfoot">
+              <div>💬<br><span style="color:var(--muted);font-size:10px">Ask AI</span></div>
+              <div><strong>🔍 Search all</strong><br><span style="color:var(--muted);font-size:10px">312 results</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phone 2: SRP -->
+        <div class="phone">
+          <div class="notch">9:41 · ▮▮▮▮ ▾</div>
+          <div class="pscreen">
+            <div class="moverlay-hd" style="gap:6px">
+              <span class="mcancel" style="font-size:18px">←</span>
+              <div class="search"><span class="icon"></span><span class="qtext">python</span></div>
+            </div>
+            <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+              <div style="font-size:11px;color:var(--muted)">312 books · 14 authors</div>
+              <div style="display:flex;gap:6px">
+                <div class="mfilterbtn">Filter</div>
+                <div class="mfilterbtn">Sort</div>
+              </div>
+            </div>
+            <div style="padding:10px 12px;background:#fafafa;border-bottom:1px solid var(--line)">
+              <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Looking to learn?</div>
+              <div style="display:flex;gap:6px;overflow:auto">
+                <div class="pill" style="white-space:nowrap;border:1.5px solid var(--ink);padding:6px 10px;font-size:11px;background:#fff">📚 Learning path</div>
+                <div class="pill ghost" style="white-space:nowrap;border:1.5px solid var(--ink);padding:6px 10px;font-size:11px">💬 Ask AI</div>
+              </div>
+            </div>
+            <div style="padding:10px 12px;border-bottom:1px solid #eee">
+              <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Topics</div>
+              <div style="display:flex;gap:6px;overflow:auto">
+                <div class="chip" style="white-space:nowrap"># Python</div>
+                <div class="chip" style="white-space:nowrap"># Data Sci</div>
+                <div class="chip" style="white-space:nowrap"># Django</div>
+                <div class="chip" style="white-space:nowrap"># ML</div>
+              </div>
+            </div>
+            <div style="padding:10px 12px;border-bottom:1px solid #eee">
+              <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Authors</div>
+              <div style="display:flex;gap:10px;overflow:auto">
+                <div class="authcard" style="width:60px"><div class="avatar" style="width:36px;height:36px"></div><div class="h">Matthes</div></div>
+                <div class="authcard" style="width:60px"><div class="avatar" style="width:36px;height:36px"></div><div class="h">Lutz</div></div>
+                <div class="authcard" style="width:60px"><div class="avatar" style="width:36px;height:36px"></div><div class="h">Ramalho</div></div>
+                <div class="authcard" style="width:60px"><div class="avatar" style="width:36px;height:36px"></div><div class="h">Sweigart</div></div>
+              </div>
+            </div>
+            <div style="overflow:auto;flex:1">
+              <div style="padding:8px 12px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">Books · 304</div>
+              <div class="bookrow"><div class="thumb"></div><div class="meta"><div class="title">Learn Python, 3rd Ed.</div><div class="sub">Matthes · Beginner</div></div><div class="price">$39</div></div>
+              <div class="bookrow"><div class="thumb"></div><div class="meta"><div class="title">Python Crash Course</div><div class="sub">Matthes · Beginner</div></div><div class="price">$34</div></div>
+              <div class="bookrow"><div class="thumb"></div><div class="meta"><div class="title">Fluent Python</div><div class="sub">Ramalho · Advanced</div></div><div class="price">$59</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phone 3: filter bottom sheet -->
+        <div class="phone">
+          <div class="notch">9:41 · ▮▮▮▮ ▾</div>
+          <div class="pscreen" style="background:rgba(0,0,0,.35);justify-content:flex-end">
+            <div style="background:#fff;border-top:1px solid var(--line);border-radius:16px 16px 0 0;padding:14px;max-height:70%;overflow:auto">
+              <div style="width:32px;height:3px;background:#ccc;margin:0 auto 14px;border-radius:2px"></div>
+              <div style="font-weight:600;margin-bottom:10px">Filters</div>
+              <div class="group">
+                <h4 style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin:0 0 6px">LEVEL</h4>
+                <div class="facet"><div class="check"></div>Beginner<span class="count">142</span></div>
+                <div class="facet"><div class="check"></div>Intermediate<span class="count">98</span></div>
+                <div class="facet"><div class="check"></div>Advanced<span class="count">72</span></div>
+              </div>
+              <div class="group">
+                <h4 style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin:0 0 6px">TOPIC</h4>
+                <div class="facet"><div class="check"></div>Data Science<span class="count">84</span></div>
+                <div class="facet"><div class="check"></div>Web<span class="count">61</span></div>
+                <div class="facet"><div class="check"></div>ML<span class="count">38</span></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:14px">
+                <div style="flex:1;padding:10px;text-align:center;border:1px solid var(--line)">Clear</div>
+                <div style="flex:1;padding:10px;text-align:center;background:var(--ink);color:#fff">Apply (3)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="note" style="margin-top:16px">
+        Mobile patterns: tap search → full-screen overlay (not dropdown) · keyboard "Search" key = Enter · filters as bottom-sheet · sticky footer actions
+      </div>
+    </div>
+  </div>
+
+  <!-- Intent matrix -->
+  <h2>Intent → UI matrix</h2>
+  <div class="frame">
+    <div class="body" style="padding:18px 20px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--line);text-align:left">
+            <th style="padding:8px 6px;width:18%">Intent</th>
+            <th style="padding:8px 6px;width:28%">Signal</th>
+            <th style="padding:8px 6px;width:28%">Autocomplete</th>
+            <th style="padding:8px 6px">SRP / Enter</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #eee;vertical-align:top">
+            <td style="padding:10px 6px"><strong>Navigational</strong></td>
+            <td style="padding:10px 6px">Exact-ish match on book/author title; short query</td>
+            <td style="padding:10px 6px">Top Hit card · Enter opens entity</td>
+            <td style="padding:10px 6px">Skip SRP, go straight to book/author page · ⌘+↵ overrides</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;vertical-align:top">
+            <td style="padding:10px 6px"><strong>Exploratory</strong></td>
+            <td style="padding:10px 6px">Broad noun (topic, language, framework)</td>
+            <td style="padding:10px 6px">Balanced: books + authors + topics</td>
+            <td style="padding:10px 6px">SRP with Topics/Authors strips above books · filters open</td>
+          </tr>
+          <tr style="vertical-align:top">
+            <td style="padding:10px 6px"><strong>Learning</strong></td>
+            <td style="padding:10px 6px">"how to", "for X", level keywords, > 6 words</td>
+            <td style="padding:10px 6px">Ask-AI footer promoted to primary · books marked "weak match"</td>
+            <td style="padding:10px 6px">Learning-path module replaces strips · books pre-filtered by level</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
