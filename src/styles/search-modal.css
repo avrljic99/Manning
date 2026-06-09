@@ -12,17 +12,56 @@
     box-shadow:0 30px 80px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;border:1px solid #ececec}
   .sm-head{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid #f0f0f0;flex-shrink:0}
   .sm-head svg.sm-srch{flex-shrink:0;color:#888}
-  .sm-input{flex:1;border:0;outline:0;font-size:18px;background:transparent;color:#202124}
+  /* Input wrapper: holds the actual <input> AND the × clear button, so the
+     focus ring (drawn by the global input:focus-visible rule) ends up around
+     both — making the × visually inside the field, not next to it. */
+  .sm-input-wrap{flex:1;display:flex;align-items:center;gap:6px;border-radius:3px}
+  .sm-input-wrap:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+  .sm-input{flex:1;border:0;outline:0;font-size:18px;background:transparent;color:#202124;min-width:0}
+  .sm-input:focus-visible{outline:0 !important;outline-offset:0 !important}
   .sm-input::placeholder{color:#9aa0a6}
-  .sm-close{width:32px;height:32px;border:0;background:#f3f3f3;border-radius:8px;cursor:pointer;font-size:18px;
-    color:#444;display:flex;align-items:center;justify-content:center}
-  .sm-close:hover{background:#e8e8e8}
+
+  /* The × lives INSIDE the input field on the right. Clears the user's text;
+     does NOT close the modal (outside-click closes). Hidden when input is empty. */
+  .sm-close{width:24px;height:24px;border:0;background:transparent;border-radius:50%;cursor:pointer;font-size:18px;
+    color:#5f6368;display:none;align-items:center;justify-content:center;flex-shrink:0;line-height:1;padding:0;margin-right:2px}
+  .sm-close:hover{background:#f1f3f4;color:#202124}
+  .sm-close:focus-visible{outline:0 !important}
   .sm-chips{display:flex;gap:8px;padding:14px 22px;overflow-x:auto;border-bottom:1px solid #f5f5f5;flex-shrink:0}
   .sm-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:#f6f7f9;border:1px solid #ececec;
     border-radius:999px;font-size:13px;color:#202124;cursor:pointer;white-space:nowrap}
   .sm-chip:hover{background:#eef3ff;border-color:#d4e2ff}
-  .sm-chip .ico{width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;
-    background:#22211d;color:#fff;font-size:10px;font-weight:700}
+  /* Recent-chip icon (left of the label). Each entry type styles it differently:
+     books get a mini cover, authors get initials, topics get a logo, etc.
+     Hover anywhere on the chip swaps the icon body → ×. */
+  .sm-chip .ico{
+    width:20px;height:20px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;
+    background:#22211d;color:#fff;font-size:10px;font-weight:700;line-height:1;
+    position:relative;overflow:hidden;transition:background .12s;flex-shrink:0;
+  }
+  .sm-chip .ico .ico-body,
+  .sm-chip .ico .ico-x{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    transition:opacity .12s;
+  }
+  .sm-chip .ico .ico-x{opacity:0;font-size:14px;font-weight:400}
+  .sm-chip .ico .ico-body img,
+  .sm-chip .ico .ico-body .cv-img{
+    width:100%;height:100%;object-fit:cover;display:block;font-size:9px;border-radius:0
+  }
+  /* Per-type backgrounds for variety (still dark to keep visual rhythm). */
+  .sm-chip.type-book   .ico{background:transparent}      /* cover fills the box */
+  .sm-chip.type-author .ico{background:#5f6368;border-radius:50%}
+  .sm-chip.type-topic  .ico{background:#fff;color:#202124;border:1px solid #e0e0e0;font-size:13px}
+  .sm-chip.type-pojam  .ico{background:#fbf3e3;color:#9c6c1c;font-size:13px}
+  .sm-chip.type-search .ico{background:#22211d;color:#fff}
+
+  /* Hover anywhere on chip → swap body for × */
+  .sm-chip.is-recent:hover .ico{background:#000 !important;color:#fff;border-color:#000}
+  .sm-chip.is-recent:hover .ico .ico-body{opacity:0}
+  .sm-chip.is-recent:hover .ico .ico-x{opacity:1}
+  .sm-chip.is-recent .ico{cursor:pointer}
   .sm-avatars{display:flex;gap:14px;padding:16px 22px;overflow-x:auto;border-bottom:1px solid #f5f5f5;flex-shrink:0}
   .sm-av{width:56px;height:56px;border-radius:14px;background:#22211d;color:#fff;display:flex;align-items:center;justify-content:center;
     font-weight:700;font-size:18px;flex-shrink:0;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.08);
@@ -38,7 +77,10 @@
   .sm-nav button.active{background:#eef3ff;color:#1a73e8;font-weight:600}
   .sm-content{flex:1;overflow-y:auto;padding:20px 24px}
   .sm-section{margin-bottom:24px}
-  .sm-section-title{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#888;font-weight:700;margin:0 0 12px}
+  .sm-section-title{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#9aa0a6;font-weight:700;margin:0 0 12px;
+  }
   .sm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
   @media (max-width:900px){ .sm-grid{grid-template-columns:repeat(2,1fr)} .sm-nav{display:none} }
   .sm-card-item{background:#f6f7f9;border:1px solid #ececec;border-radius:14px;padding:16px;min-height:128px;
@@ -50,6 +92,49 @@
   .sm-cover{width:46px;height:62px;border-radius:4px;background:linear-gradient(135deg,#1b6ec2,#22211d);margin-bottom:10px;
     box-shadow:0 2px 6px rgba(0,0,0,.15)}
   .sm-empty{padding:40px 0;text-align:center;color:#888;font-size:14px}
+
+  /* Categories tab: list-style rows with name on left, book count on right */
+  .sm-cat-list{display:flex;flex-direction:column;gap:2px;padding:4px 0}
+  .sm-cat-row{display:flex;align-items:center;justify-content:space-between;
+    width:100%;border:0;background:transparent;cursor:pointer;
+    padding:12px 16px;border-radius:8px;font-size:16px;color:#202124;
+    font:inherit;font-weight:400;text-align:left;
+    transition:background .12s}
+  .sm-cat-row:hover,.sm-cat-row:focus-visible{background:#f1f3f4;outline:0}
+  .sm-cat-row .ttl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* Left-side badge: initials for authors, category logo for topics. */
+  .sm-row-av{
+    width:28px;height:28px;border-radius:50%;flex-shrink:0;margin-right:12px;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:600;line-height:1;
+  }
+  .sm-row-av-author{background:#dadce0;color:#5f6368;letter-spacing:.3px}
+  .sm-row-av-topic{background:#fff;color:#202124;border:1px solid #e8eaed;font-size:14px}
+  .sm-row-av-topic svg{width:20px;height:20px;display:block}
+  /* Right-aligned count slot. Single count (Authors/Concepts) — one number + book icon.
+     Triple count (Categories) — books, videos, authors each in its own fixed slot
+     so all icons line up vertically across rows. */
+  .sm-cat-row .count{color:#9aa0a6;font-size:14px;font-variant-numeric:tabular-nums;margin-left:16px;flex-shrink:0;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:56px}
+  .sm-cat-row .count .n{min-width:28px;text-align:right}
+  .sm-cat-row .count .sm-emoji{font-size:15px;line-height:1;display:inline-block;flex-shrink:0}
+
+  .sm-cat-row .counts{display:inline-flex;align-items:center;gap:18px;margin-left:16px;flex-shrink:0}
+  .sm-cat-row .counts .count{margin-left:0;min-width:48px;gap:6px}
+  .sm-cat-row .counts .count .n{min-width:24px}
+
+  /* Concepts in the Explore tab render as quoted pill chips — quick visual scan,
+     each chip clickable to jump to that concept's page. */
+  .sm-concept-chips{display:flex;flex-wrap:wrap;gap:10px;padding:2px 0}
+  .sm-concept-chip{
+    background:#f1f3f4;border:0;border-radius:999px;
+    padding:10px 18px;font-size:14px;font-weight:500;color:#202124;
+    cursor:pointer;white-space:nowrap;transition:background .12s;
+    font:inherit;font-size:14px;font-weight:500;
+  }
+  .sm-concept-chip:hover{background:#e8eaed}
+  .sm-concept-chip:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}
   /* Your books / reading progress strip */
   .sm-yb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
   @media (max-width:900px){ .sm-yb-grid{grid-template-columns:repeat(2,1fr)} }
@@ -86,6 +171,16 @@
   .sm-rico.topic{width:36px;height:36px;background:transparent;color:#5f6368;font-size:22px;line-height:1}
   .sm-rico.topic svg{width:24px;height:24px;display:block}
   .sm-rico.pojam{width:36px;height:36px;background:transparent;color:#9aa0a6;font-size:22px;font-weight:400;line-height:1}
+  /* Trailing footer rows in autocomplete: search + Ask AI. Both icons stay
+     completely flat — no background, no border, no outline of any kind. */
+  .sm-rico.search,
+  .sm-rico.ai{
+    width:36px;height:36px;background:transparent !important;
+    border:0;outline:0;box-shadow:none;color:#5f6368;font-size:18px;
+  }
+  .sm-rico.search svg{width:20px;height:20px;display:block;stroke:#5f6368}
+  .sm-rico.ai{color:#9c6c1c}
+  .sm-row-search .sm-rtitle{color:#5f6368;font-weight:400}
   .sm-row .sm-rmain{flex:1;min-width:0}
   .sm-row .sm-rtitle{font-size:14px;color:#202124;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sm-row .sm-rmeta{font-size:12px;color:#5f6368;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

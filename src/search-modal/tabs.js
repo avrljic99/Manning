@@ -9,7 +9,7 @@
 //   helpers = { bookAuthors, bookCoverImg, initials, CATEGORY_LOGOS }
 // Data, scoring and escaping are imported directly (stable shared layers).
 
-import { BOOKS, AUTHORS, TOPICS, POJMOVI } from '../data/index.js';
+import { BOOKS, AUTHORS, TOPICS, POJMOVI, VIDEOS } from '../data/index.js';
 import { scoreBook, scoreAuthor, scoreTopic, scorePojam } from '../lib/search.js';
 import { escapeHtml, escapeAttr } from '../lib/dom.js';
 
@@ -58,32 +58,101 @@ function yourBooksSection() {
     <div class="sm-yb-grid">${cards}</div>
   </div>`;
 }
-const booksSection = () => section('Trending books', smGrid(BOOKS.slice(0, 12), bookCard));
+const booksSection = () => smGrid(BOOKS.slice(0, 12), bookCard);
 const topicsSection = (title) => section(title, smGrid(TOPICS.slice(0, 12), topicCard));
 const authorsSection = () => section('Authors', smGrid(AUTHORS.slice(0, 12), authorCard));
 const conceptsSection = () => section('Concepts', smGrid(POJMOVI.slice(0, 12), pojamCard));
 
+// Emoji glyphs used as count icons across the modal lists.
+const BOOK_ICON_SVG   = `<span class="sm-emoji" aria-hidden="true">📚</span>`;
+const VIDEO_ICON_SVG  = `<span class="sm-emoji" aria-hidden="true">📹</span>`;
+const AUTHOR_ICON_SVG = `<span class="sm-emoji" aria-hidden="true">✍🏻</span>`;
+
+const sortByName = (arr) => [...arr].sort((a, b) => a.name.localeCompare(b.name));
+const bookCountOf = (it) => it.bookCount != null ? it.bookCount : (it.bookIds?.length || 0);
+const sortByPopularity = (arr) => [...arr].sort((a, b) => bookCountOf(b) - bookCountOf(a));
+
+// Left-side visual badge for list rows — initials avatar for authors,
+// category logo (SVG or emoji glyph) for topics. Both render as a 28px circle.
+function authorAvatarHTML(name, helpers) {
+  const init = helpers?.initials ? helpers.initials(name)
+             : (name.charAt(0) + (name.split(/\s+/)[1]?.charAt(0) || '')).toUpperCase();
+  return `<span class="sm-row-av sm-row-av-author">${escapeHtml(init)}</span>`;
+}
+function categoryLogoHTML(topicId, helpers) {
+  const logo = helpers?.CATEGORY_LOGOS?.[topicId] || '◧';
+  return `<span class="sm-row-av sm-row-av-topic">${logo}</span>`;
+}
+
+// Row renderers — used by both full and "top N" lists.
+function categoryRowHTML(t, ctx) {
+  const books   = t.bookIds?.length || 0;
+  const videos  = VIDEOS.filter((v) => v.topicIds?.includes(t.id)).length;
+  const authors = new Set(
+    BOOKS.filter((b) => b.topicIds?.includes(t.id)).flatMap((b) => b.authorIds || [])
+  ).size;
+  return `<button class="sm-cat-row" data-sm-go="topic:${escapeAttr(t.id)}">
+    ${categoryLogoHTML(t.id, ctx?.helpers)}
+    <span class="ttl">${escapeHtml(t.name)}</span>
+    <span class="counts">
+      <span class="count" title="${books} books"><span class="n">${books}</span>${BOOK_ICON_SVG}</span>
+      <span class="count" title="${videos} videos"><span class="n">${videos}</span>${VIDEO_ICON_SVG}</span>
+      <span class="count" title="${authors} authors"><span class="n">${authors}</span>${AUTHOR_ICON_SVG}</span>
+    </span>
+  </button>`;
+}
+function singleCountRowHTML(it, goKind, ctx) {
+  const left = goKind === 'author' ? authorAvatarHTML(it.name, ctx?.helpers) : '';
+  return `<button class="sm-cat-row" data-sm-go="${goKind}:${escapeAttr(it.id)}">
+    ${left}
+    <span class="ttl">${escapeHtml(it.name)}</span>
+    <span class="count"><span class="n">${bookCountOf(it)}</span>${BOOK_ICON_SVG}</span>
+  </button>`;
+}
+const listWrap = (rowsHTML) => `<div class="sm-cat-list">${rowsHTML}</div>`;
+
+// Dedicated-tab lists: full catalog, sorted alphabetically.
+const categoriesList = (ctx) => listWrap(sortByName(TOPICS).map((t) => categoryRowHTML(t, ctx)).join(''));
+const authorsList    = (ctx) => listWrap(sortByName(AUTHORS).map((a) => singleCountRowHTML(a, 'author', ctx)).join(''));
+const conceptsList   = (ctx) => listWrap(sortByName(POJMOVI).map((p) => singleCountRowHTML(p, 'pojam',  ctx)).join(''));
+
+// Explore sub-sections: top N by popularity.
+const categoriesTopList = (n, ctx) => listWrap(sortByPopularity(TOPICS) .slice(0, n).map((t) => categoryRowHTML(t, ctx)).join(''));
+const authorsTopList    = (n, ctx) => listWrap(sortByPopularity(AUTHORS).slice(0, n).map((a) => singleCountRowHTML(a, 'author', ctx)).join(''));
+
+// Concepts in Explore render as quoted pill chips (compact overview).
+function conceptsChipsExplore() {
+  const chips = sortByPopularity(POJMOVI).map((p) => `
+    <button class="sm-concept-chip" data-sm-go="pojam:${escapeAttr(p.id)}">"${escapeHtml(p.name)}"</button>
+  `).join('');
+  return section('Concepts', `<div class="sm-concept-chips">${chips}</div>`);
+}
+
 // --- tab renderers (empty mode) ---------------------------------------------
-function explore() {
-  return yourBooksSection() + booksSection() + topicsSection('Topics') + authorsSection() + conceptsSection();
+function explore(ctx) {
+  // Explore = curated overview: 8 trending books, top 5 popular categories &
+  // authors (by book count), plus concepts as quoted pill chips.
+  return yourBooksSection()
+    + section('Books',              smGrid(BOOKS.slice(0, 8), bookCard))
+    + section('Popular Categories', categoriesTopList(5, ctx))
+    + section('Popular Authors',    authorsTopList(5, ctx))
+    + conceptsChipsExplore();
 }
 const books = () => booksSection();
-const categories = () => topicsSection('Categories');
-const topics = () => topicsSection('Topics');
-const authors = () => authorsSection();
-const concepts = () => conceptsSection();
+const categories = (ctx) => categoriesList(ctx);
+const authors    = (ctx) => authorsList(ctx);
 
 // Registry: drives the left-nav active state and the render dispatcher.
+// Concepts intentionally omitted — they live only in the Explore overview
+// as quoted pill chips; no dedicated tab.
 export const TABS = [
   { id: 'explore',    label: 'Explore',    icon: '🧭' },
   { id: 'categories', label: 'Categories', icon: '🗂' },
   { id: 'books',      label: 'Books',      icon: '📚' },
   { id: 'authors',    label: 'Authors',    icon: '✍️' },
-  { id: 'topics',     label: 'Topics',     icon: '🏷' },
-  { id: 'pojmovi',    label: 'Concepts',   icon: '💡' },
 ];
 
-export const tabRenderers = { explore, books, categories, authors, topics, pojmovi: concepts };
+export const tabRenderers = { explore, books, categories, authors };
 
 // --- searching mode (query non-empty): flat list ranked by score ------------
 export function searchingView(ctx, q) {
@@ -95,7 +164,26 @@ export function searchingView(ctx, q) {
     ...AUTHORS.map((a) => ({ kind: 'author', item: a, s: scoreAuthor(a, ql) })),
     ...TOPICS .map((t) => ({ kind: 'topic',  item: t, s: scoreTopic(t, ql) })),
     ...POJMOVI.map((p) => ({ kind: 'pojam',  item: p, s: scorePojam(p, ql) })),
-  ].filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 10);
+  ].filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 6);
+
+  // Two trailing rows: (7) "Search for query" → SRP, (8) "Ask AI about query" → AI.
+  // The query is carried in a separate data-sm-q attribute so colons inside the
+  // query don't confuse the smGo parser.
+  const trailingRows = `
+    <div class="sm-row sm-row-search" data-sm-go="search" data-sm-q="${escapeAttr(ql)}">
+      <div class="sm-rico search">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      </div>
+      <div class="sm-rmain">
+        <div class="sm-rtitle">${escapeHtml(ql)}</div>
+      </div>
+    </div>
+    <div class="sm-row sm-row-search" data-sm-go="askai" data-sm-q="${escapeAttr(ql)}">
+      <div class="sm-rico ai">✦</div>
+      <div class="sm-rmain">
+        <div class="sm-rtitle">Ask AI about "${escapeHtml(ql)}"</div>
+      </div>
+    </div>`;
 
   const titleFor = { book: r => r.item.title, author: r => r.item.name, topic: r => r.item.name, pojam: r => r.item.name };
   const metaFor = {
@@ -123,11 +211,10 @@ export function searchingView(ctx, q) {
     pojam: () => '#',
   };
 
-  // Autocomplete: the ranked list IS the result — no explicit "search"/"ask AI"
-  // rows. Question-shaped queries are routed to the AI state by the dispatcher;
-  // everything else lands here, and Enter opens the full SRP.
+  // Autocomplete: up to 6 ranked results, then "Search for {q}" and "Ask AI" rows.
   if (!allScored.length) {
-    return `<div class="sm-empty">No results for "${escapeHtml(ql)}"</div>`;
+    return `<div class="sm-empty">No results for "${escapeHtml(ql)}"</div>
+      <div class="sm-list">${trailingRows}</div>`;
   }
 
   const rows = allScored.map((r) => `
@@ -139,5 +226,5 @@ export function searchingView(ctx, q) {
       </div>
     </div>`).join('');
 
-  return `<div class="sm-list">${rows}</div>`;
+  return `<div class="sm-list">${rows}${trailingRows}</div>`;
 }

@@ -14,12 +14,12 @@
 import { smState, setTab, setQuery, isSearching } from './state.js';
 import { tabRenderers, searchingView } from './tabs.js';
 import { aiView } from './ai.js';
-import { TOPICS } from '../data/index.js';
+import { TOPICS, BOOKS, AUTHORS, POJMOVI } from '../data/index.js';
 import { isAskAIIntent } from '../lib/search.js';
 import { escapeHtml, escapeAttr } from '../lib/dom.js';
 
 export function initSearchModal(deps) {
-  const { pageInput, searchEl, nav, helpers, ai } = deps;
+  const { pageInput, searchEl, nav, helpers, ai, recents } = deps;
 
   const overlay  = document.getElementById('searchModal');
   const input    = document.getElementById('sm-input');
@@ -52,11 +52,53 @@ export function initSearchModal(deps) {
   }
 
   function renderChips() {
-    const top = TOPICS.filter((t) => !t.parent).slice(0, 7);
-    chips.innerHTML = top.map((t) => `
-      <button class="sm-chip" data-sm-chip="${escapeAttr(t.name)}">
-        <span class="ico">${escapeHtml(t.name.charAt(0))}</span>${escapeHtml(t.name)}
-      </button>`).join('');
+    // Chips strip is the user's recent-searches lane. Each chip is type-aware:
+    //   - book   → mini cover thumbnail + title
+    //   - author → initials avatar + name
+    //   - topic  → category logo + name
+    //   - pojam  → # + concept name
+    //   - search → first letter + query text
+    // Hover anywhere on a chip swaps the icon → × ; click × deletes.
+    const recentList = recents?.load?.() || [];
+    if (!recentList.length) {
+      chips.innerHTML = '';
+      chips.style.display = 'none';
+      return;
+    }
+    chips.style.display = '';
+
+    // Each chip carries the full entry as data-sm-chip-* attrs so the click
+    // dispatcher knows where to navigate AND what to remove.
+    chips.innerHTML = recentList.slice(0, 7).map((e) => {
+      const dataAttrs = `data-sm-chip-type="${escapeAttr(e.type)}" data-sm-chip-id="${escapeAttr(e.id || '')}" data-sm-chip-label="${escapeAttr(e.label)}"`;
+      const removeAttrs = `data-sm-chip-remove="1" ${dataAttrs}`;
+      let iconInner = '';
+      let iconClass = '';
+      if (e.type === 'book') {
+        const b = BOOKS.find((x) => x.id === e.id);
+        iconInner = b && helpers?.bookCoverImg ? helpers.bookCoverImg(b) : escapeHtml(e.label.charAt(0).toUpperCase());
+        iconClass = 'ico-book';
+      } else if (e.type === 'author') {
+        iconInner = helpers?.initials ? escapeHtml(helpers.initials(e.label)) : escapeHtml(e.label.charAt(0).toUpperCase());
+        iconClass = 'ico-author';
+      } else if (e.type === 'topic') {
+        const logo = helpers?.CATEGORY_LOGOS?.[e.id];
+        iconInner = logo || escapeHtml(e.label.charAt(0).toUpperCase());
+        iconClass = 'ico-topic';
+      } else if (e.type === 'pojam') {
+        iconInner = '#';
+        iconClass = 'ico-pojam';
+      } else {
+        iconInner = escapeHtml(e.label.charAt(0).toUpperCase());
+        iconClass = 'ico-search';
+      }
+      return `<button class="sm-chip is-recent type-${e.type}" ${dataAttrs}>
+        <span class="ico ${iconClass}" ${removeAttrs} aria-label="Remove from recent searches">
+          <span class="ico-body">${iconInner}</span>
+          <span class="ico-x">×</span>
+        </span>${escapeHtml(e.label)}
+      </button>`;
+    }).join('');
   }
 
   // Lock background scroll while the modal is open. Pad for the now-hidden
@@ -73,6 +115,8 @@ export function initSearchModal(deps) {
     lockScroll(true);
     input.value = pageInput.value;
     setQuery(pageInput.value);
+    // × button only visible when the input has text
+    closeBtn.style.display = input.value ? 'flex' : 'none';
     renderChips();
     render();
     setTimeout(() => input.focus(), 30);
@@ -103,10 +147,30 @@ export function initSearchModal(deps) {
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      close();
+      // Esc clears the input first; only closes the modal when input is empty.
+      if (input.value) {
+        clearInput();
+      } else {
+        close();
+      }
     }
   });
-  closeBtn.addEventListener('click', close);
+
+  // The × button now lives INSIDE the input field and clears the user's text.
+  // To close the modal, the user clicks outside the modal card.
+  function clearInput() {
+    input.value = '';
+    setQuery('');
+    closeBtn.style.display = 'none';
+    render();
+    input.focus();
+  }
+  closeBtn.addEventListener('click', (e) => { e.stopPropagation(); clearInput(); });
+  // Show/hide × based on whether the input has content.
+  input.addEventListener('input', () => {
+    closeBtn.style.display = input.value ? 'flex' : 'none';
+  });
+  // Outside-click on the overlay (anywhere outside the card) closes the modal.
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
   navEl.addEventListener('click', (e) => {
@@ -117,11 +181,33 @@ export function initSearchModal(deps) {
     render();
   });
   chips.addEventListener('click', (e) => {
-    const c = e.target.closest('[data-sm-chip]');
+    // Click on the icon (which shows × on hover) → delete from recents
+    const x = e.target.closest('[data-sm-chip-remove]');
+    if (x) {
+      e.stopPropagation();
+      recents?.remove?.({
+        type:  x.dataset.smChipType,
+        id:    x.dataset.smChipId || undefined,
+        label: x.dataset.smChipLabel,
+      });
+      renderChips();
+      return;
+    }
+    // Click on the chip body → navigate (or fill input for plain searches)
+    const c = e.target.closest('[data-sm-chip-type]');
     if (!c) return;
-    input.value = c.dataset.smChip;
-    pageInput.value = c.dataset.smChip;
-    setQuery(c.dataset.smChip);
+    const type  = c.dataset.smChipType;
+    const id    = c.dataset.smChipId;
+    const label = c.dataset.smChipLabel;
+    if (type === 'book')   { close(); nav.goBook(id);   return; }
+    if (type === 'author') { close(); nav.goAuthor(id); return; }
+    if (type === 'topic')  { close(); nav.goTopic(id);  return; }
+    if (type === 'pojam')  { close(); nav.goPojam(id);  return; }
+    // Plain typed search — fill the input and re-render results inline
+    input.value = label;
+    pageInput.value = label;
+    setQuery(label);
+    closeBtn.style.display = input.value ? 'flex' : 'none';
     render();
   });
   content.addEventListener('click', (e) => {
@@ -138,12 +224,42 @@ export function initSearchModal(deps) {
     }
     const item = e.target.closest('[data-sm-go]');
     if (!item) return;
-    const [kind, id] = item.dataset.smGo.split(':');
+    // Parse "kind:id"; the search fallback uses a separate data-sm-q so its
+    // query can contain colons without confusing the split.
+    const raw = item.dataset.smGo;
+    const colon = raw.indexOf(':');
+    const kind = colon > -1 ? raw.slice(0, colon) : raw;
+    const id   = colon > -1 ? raw.slice(colon + 1) : '';
+
+    // Record a context-rich recent entry: clicking a book remembers the BOOK
+    // (cover + title), an author remembers the AUTHOR (initials + name), etc.
+    // Pressing Enter without picking a row records only the typed query.
+    if (recents?.add) {
+      if (kind === 'book') {
+        const b = BOOKS.find((x) => x.id === id);
+        if (b) recents.add({ type:'book', id:b.id, label:b.title });
+      } else if (kind === 'author') {
+        const a = AUTHORS.find((x) => x.id === id);
+        if (a) recents.add({ type:'author', id:a.id, label:a.name });
+      } else if (kind === 'topic') {
+        const t = TOPICS.find((x) => x.id === id);
+        if (t) recents.add({ type:'topic', id:t.id, label:t.name });
+      } else if (kind === 'pojam') {
+        const p = POJMOVI.find((x) => x.id === id);
+        if (p) recents.add({ type:'pojam', id:p.id, label:p.name });
+      } else {
+        const q = (item.dataset.smQ || input.value || '').trim();
+        if (q) recents.add(q);  // string → normalized to { type:'search', label:q }
+      }
+    }
+
     close();
     if (kind === 'book')   nav.goBook(id);
     if (kind === 'author') nav.goAuthor(id);
     if (kind === 'topic')  nav.goTopic(id);
     if (kind === 'pojam')  nav.goPojam(id);
+    if (kind === 'search') nav.goSearch(item.dataset.smQ || input.value || '');
+    if (kind === 'askai')  nav.goAskAI(item.dataset.smQ || input.value || '');
   });
 
   // AI composer (bottom of the AI state): submit asks the next question in place.

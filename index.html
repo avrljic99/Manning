@@ -41,8 +41,10 @@
       <svg class="sm-srch" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
       </svg>
-      <input id="sm-input" class="sm-input" type="text" placeholder="Books, authors, topics, concepts, or a question…" autocomplete="off"/>
-      <button class="sm-close" id="sm-close" aria-label="Close">×</button>
+      <div class="sm-input-wrap">
+        <input id="sm-input" class="sm-input" type="text" placeholder="Books, authors, topics, concepts, or a question…" autocomplete="off"/>
+        <button class="sm-close" id="sm-close" aria-label="Clear">×</button>
+      </div>
     </div>
     <div class="sm-chips" id="sm-chips"></div>
     <div class="sm-body">
@@ -51,8 +53,6 @@
         <button data-tab="categories">🗂 Categories</button>
         <button data-tab="books">📚 Books</button>
         <button data-tab="authors">✍️ Authors</button>
-        <button data-tab="topics">🏷 Topics</button>
-        <button data-tab="pojmovi">💡 Concepts</button>
       </aside>
       <div class="sm-content" id="sm-content"></div>
     </div>

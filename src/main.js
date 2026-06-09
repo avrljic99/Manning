@@ -674,20 +674,22 @@ function activeFilterChipsHTML(){
 }
 
 function srpRecentStrip(currentQ){
-  // Drop question-shaped queries — those belong to Ask AI, not search
+  // SRP shows only search-shaped recents. Entity recents (book/author/topic/pojam)
+  // live in the search-modal chips strip only.
   const list = loadRecent()
-    .filter(x => x.toLowerCase() !== (currentQ||'').toLowerCase())
-    .filter(x => !isAskAIIntent(x));
+    .filter(e => e.type === 'search')
+    .filter(e => e.label.toLowerCase() !== (currentQ||'').toLowerCase())
+    .filter(e => !isAskAIIntent(e.label));
   if(!list.length) return '';
   return `<div class="srp-recent">
     <div class="srp-recent-inner">
       <span class="srp-recent-lbl">recent searches</span>
       <div class="srp-recent-chips">
-        ${list.slice(0,8).map(q => `
-          <span class="srp-rchip" data-srp-recent="${escapeAttr(q)}">
+        ${list.slice(0,8).map(e => `
+          <span class="srp-rchip" data-srp-recent="${escapeAttr(e.label)}">
             <span class="clock">↻</span>
-            <span>${escapeHtml(q)}</span>
-            <span class="x" data-srp-remove="${escapeAttr(q)}" title="Remove">×</span>
+            <span>${escapeHtml(e.label)}</span>
+            <span class="x" data-srp-remove="${escapeAttr(e.label)}" title="Remove">×</span>
           </span>`).join('')}
         <button class="srp-recent-clear" onclick="clearRecent();renderSRP(${JSON.stringify(currentQ||'')})">Clear all</button>
       </div>
@@ -2074,41 +2076,76 @@ let ddState = { items:[], focusedIdx:-1, q:'', userMovedFocus:false };
 let debounceTimer = null;
 
 /* ----- Recent searches (localStorage) ----- */
-const RECENT_KEY = 'manning-mock-recent';
+const RECENT_KEY = 'manning-mock-recent-v3';
 const RECENT_MAX = 8;
-const RECENT_SEED = ['python', 'react', 'machine learning', 'kubernetes', 'eric matthes'];
+// No seed — recents start empty; user-driven only (clicking a result fills the strip).
+const RECENT_SEED = [];
+
+// Recent entries are objects: { type, label, id? }
+// - { type:'search', label:'python' }                       → user typed + Enter
+// - { type:'book',   label:'Fluent Python',    id:'fluent-python' }
+// - { type:'author', label:'Eric Matthes',     id:'matthes' }
+// - { type:'topic',  label:'Python',           id:'python' }
+// - { type:'pojam',  label:'Python generators',id:'py-generators' }
+// String inputs are accepted for backward compatibility and treated as 'search'.
+function normalizeRecent(e){
+  if(e == null) return null;
+  if(typeof e === 'string'){
+    const q = e.trim();
+    return q ? { type:'search', label:q } : null;
+  }
+  if(typeof e === 'object' && e.label){
+    const t = e.type || 'search';
+    if(t === 'search') return { type:'search', label:String(e.label).trim() };
+    return { type:t, label:String(e.label), id:e.id };
+  }
+  return null;
+}
+function sameRecent(a, b){
+  if(a.type !== b.type) return false;
+  if(a.type === 'search') return (a.label||'').toLowerCase() === (b.label||'').toLowerCase();
+  return a.id === b.id;
+}
 function loadRecent(){
   try {
     const raw = localStorage.getItem(RECENT_KEY);
-    if(raw === null){ saveRecent(RECENT_SEED); return [...RECENT_SEED] }
-    return JSON.parse(raw);
-  } catch { return [...RECENT_SEED] }
+    if(raw === null){
+      const seeded = RECENT_SEED.map(normalizeRecent).filter(Boolean);
+      saveRecent(seeded);
+      return seeded;
+    }
+    return JSON.parse(raw).map(normalizeRecent).filter(Boolean);
+  } catch { return RECENT_SEED.map(normalizeRecent).filter(Boolean) }
 }
 function saveRecent(arr){
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(arr.slice(0, RECENT_MAX))) } catch {}
 }
-function addRecent(q){
-  q = q.trim(); if(!q) return;
-  const list = loadRecent().filter(x => x.toLowerCase() !== q.toLowerCase());
-  list.unshift(q);
+function addRecent(entryOrQuery){
+  const entry = normalizeRecent(entryOrQuery);
+  if(!entry || !entry.label) return;
+  const list = loadRecent().filter(e => !sameRecent(e, entry));
+  list.unshift(entry);
   saveRecent(list);
 }
-function removeRecent(q){
-  saveRecent(loadRecent().filter(x => x !== q));
+function removeRecent(entryOrQuery){
+  const target = normalizeRecent(entryOrQuery);
+  if(!target) return;
+  saveRecent(loadRecent().filter(e => !sameRecent(e, target)));
 }
 function clearRecent(){ saveRecent([]) }
 
 function renderRecentList(){
-  // Only show search-shaped recents; questions live in Ask AI flow
-  const list = loadRecent().filter(x => !isAskAIIntent(x));
+  // Only show search-shaped recents; questions live in Ask AI flow.
+  // Entity recents (book/author/topic/pojam) live in the modal chips strip only.
+  const list = loadRecent().filter(e => e.type === 'search' && !isAskAIIntent(e.label));
   if(!list.length) return '';
-  return list.slice(0,5).map(q => `
-    <div class="recent-row" data-recent="${escapeAttr(q)}">
+  return list.slice(0,5).map(e => `
+    <div class="recent-row" data-recent="${escapeAttr(e.label)}">
       <div class="icoholder">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
       </div>
-      <div class="rtxt">${escapeHtml(q)}</div>
-      <span class="ru" data-remove="${escapeAttr(q)}" title="Remove from recent searches">Remove</span>
+      <div class="rtxt">${escapeHtml(e.label)}</div>
+      <span class="ru" data-remove="${escapeAttr(e.label)}" title="Remove from recent searches">Remove</span>
     </div>`).join('');
 }
 
@@ -2190,7 +2227,7 @@ function showSkeleton(){
 
 function renderEmptyDropdown(){
   ddState.q = ''; ddState.items = []; ddState.focusedIdx = -1; ddState.userMovedFocus = false;
-  const visibleRecents = loadRecent().filter(x => !isAskAIIntent(x));
+  const visibleRecents = loadRecent().filter(e => e.type === 'search' && !isAskAIIntent(e.label));
   const recentHTML = visibleRecents.length ? renderRecentList() : `
     <div style="padding:18px 14px;color:var(--muted);font-size:13px;text-align:center">
       Start typing to search books, authors, and topics
@@ -2208,7 +2245,7 @@ function renderEmptyDropdown(){
     </div>`;
 
   // Items for keyboard nav: recent rows + ask AI
-  visibleRecents.slice(0,5).forEach(q => ddState.items.push({ kind:'recent', q }));
+  visibleRecents.slice(0,5).forEach(e => ddState.items.push({ kind:'recent', q:e.label }));
   ddState.items.push({ kind:'askai', q:'' });
 
   dd.classList.add('open');
@@ -2222,64 +2259,68 @@ function renderDropdown(q){
   ddState.focusedIdx = -1;
   ddState.userMovedFocus = false;
 
-  const topActions = topActionsHTML(q);
-
-  if(!res.books.length && !res.authors.length && !res.topics.length){
-    dd.innerHTML = `
-      ${topActions}
-      <div class="dd-divider"></div>
-      <div class="empty" style="padding:30px 20px">
-        <div class="big" style="font-size:14px;margin-bottom:8px">No results for "${escapeHtml(q)}"</div>
-        <div style="color:var(--muted);font-size:12px">Try a different spelling</div>
-      </div>`;
-    ddState.items.push({ kind:'search', q });
-    ddState.items.push({ kind:'askai',  q });
-    ddState.focusedIdx = 0;
-    dd.classList.add('open');
-    return;
-  }
-
-  // Build a single mixed-ranked list — cap at 8 total
+  // Build a single mixed-ranked list — cap at 6 results;
+  // trailing rows (search + ask AI) bring the total to 8.
   const allScored = [
     ...BOOKS  .map(b => ({ kind:'book',       item:b, s:scoreBook(b,q) })),
     ...AUTHORS.map(a => ({ kind:'author',     item:a, s:scoreAuthor(a,q) })),
     ...TOPICS .map(t => ({ kind:'kategorija', item:t, s:scoreTopic(t,q) })),
     ...POJMOVI.map(p => ({ kind:'pojam',      item:p, s:scorePojam(p,q) })),
-  ].filter(x => x.s > 0).sort((a,b) => b.s - a.s).slice(0, 8);
+  ].filter(x => x.s > 0).sort((a,b) => b.s - a.s).slice(0, 6);
 
-  ddState.items.push({ kind:'search', q });
-  ddState.items.push({ kind:'askai',  q });
+  // Empty results: just the trailing rows so user can still escape to SRP / AI
+  if(!allScored.length){
+    dd.innerHTML = `
+      <div class="empty" style="padding:30px 20px">
+        <div class="big" style="font-size:14px;margin-bottom:8px">No results for "${escapeHtml(q)}"</div>
+        <div style="color:var(--muted);font-size:12px">Try a different spelling</div>
+      </div>
+      ${trailingRowsHTML(q)}`;
+    ddState.items.push({ kind:'search', q });
+    ddState.items.push({ kind:'askai',  q });
+    ddState.focusedIdx = 0;
+    dd.classList.add('open');
+    const firstRow = dd.querySelector('.footer-row');
+    if(firstRow) firstRow.classList.add('focused');
+    return;
+  }
 
-  let html = topActions + '<div class="dd-divider"></div><div class="flatlist">';
+  // Results first, then "Search for {q}" (7th) and "Ask AI about {q}" (8th)
+  let html = '<div class="flatlist">';
   allScored.forEach((r) => {
     html += rowHTML(r, q, false);
     ddState.items.push({ kind:r.kind, id:r.item.id });
   });
   html += '</div>';
+  html += trailingRowsHTML(q);
+  ddState.items.push({ kind:'search', q });
+  ddState.items.push({ kind:'askai',  q });
 
   dd.innerHTML = html;
   dd.classList.add('open');
   input.setAttribute('aria-expanded','true');
 
-  // Focus the first top-action ("Search for …")
+  // Default focus on the first result row
   ddState.focusedIdx = 0;
-  const firstRow = dd.querySelector('.footer-row');
+  const firstRow = dd.querySelector('.row');
   if(firstRow) firstRow.classList.add('focused');
 }
 
-function topActionsHTML(q){
+// Trailing footer rows: (7) "Search for {q}" → SRP, (8) "Ask AI about {q}" → AI.
+// Both icons stay flat — no background, no border, no outline.
+function trailingRowsHTML(q){
   return `<div class="footer-row search" data-kind="search" data-id="${escapeAttr(q)}">
-      <div class="icoholder">⌕</div>
+      <div class="icoholder">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#5f6368" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      </div>
       <div class="frmain">
-        <div class="frtitle">Search for "${escapeHtml(q)}"</div>
-        <div class="frsub">See all results</div>
+        <div class="frtitle">${escapeHtml(q)}</div>
       </div>
     </div>
     <div class="footer-row askai" data-kind="askai" data-id="${escapeAttr(q)}">
-      <div class="icoholder">✦</div>
+      <div class="icoholder" style="color:#9c6c1c">✦</div>
       <div class="frmain">
         <div class="frtitle">Ask AI about "${escapeHtml(q)}"</div>
-        <div class="frsub">Get a recommendation or explanation</div>
       </div>
     </div>`;
 }
@@ -2610,6 +2651,7 @@ searchModalApi = initSearchModal({
   nav: { goSearch, goSmartSearch, goAskAI, goBook, goAuthor, goTopic, goPojam },
   helpers: { bookAuthors, bookCoverImg, initials, CATEGORY_LOGOS },
   ai: { buildMessage: buildAiMessage },
+  recents: { load: loadRecent, remove: removeRecent, add: addRecent },
 });
 
 
