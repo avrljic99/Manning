@@ -1,11 +1,6 @@
-# Mirror of manning.com used only as a reference for design tokens.
-# Contains third-party assets (Google Fonts, Typekit, trackers) and is ~20 MB.
-mirror/
-
-# OS / editor noise
+node_modules
+dist
+*.local
 .DS_Store
-*.swp
-*.swo
-Thumbs.db
-.vscode/
-.idea/
+index.html.backup
+.claude/settings.local.json
