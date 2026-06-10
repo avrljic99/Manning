@@ -9,53 +9,36 @@
 //   helpers = { bookAuthors, bookCoverImg, initials, CATEGORY_LOGOS }
 // Data, scoring and escaping are imported directly (stable shared layers).
 
-import { BOOKS, AUTHORS, TOPICS, POJMOVI, VIDEOS } from '../data/index.js';
-import { scoreBook, scoreAuthor, scoreTopic, scorePojam } from '../lib/search.js';
+import { BOOKS, AUTHORS, TOPICS, POJMOVI } from '../data/index.js';
+import { scoreBook, scoreAuthor, scoreTopic, scorePojam, isAskAIIntent } from '../lib/search.js';
 import { escapeHtml, escapeAttr } from '../lib/dom.js';
-
-// --- shared building blocks -------------------------------------------------
-function smGrid(items, renderer) {
-  if (!items.length) return `<div class="sm-empty">No results</div>`;
-  return `<div class="sm-grid">${items.map(renderer).join('')}</div>`;
-}
-
-const bookCard = (b) => `<div class="sm-card-item" data-sm-go="book:${escapeAttr(b.id)}">
-    <div><div class="sm-cover"></div><div class="ttl">${escapeHtml(b.title)}</div></div>
-    <div class="meta">${b.level || ''}${b.year ? ' · ' + b.year : ''}</div></div>`;
-const authorCard = (a) => `<div class="sm-card-item" data-sm-go="author:${escapeAttr(a.id)}">
-    <div class="ttl">${escapeHtml(a.name)}</div>
-    <div class="meta">Author${a.bookIds ? ' · ' + a.bookIds.length + ' books' : ''}</div></div>`;
-const topicCard = (t) => `<div class="sm-card-item" data-sm-go="topic:${escapeAttr(t.id)}">
-    <div class="ttl">${escapeHtml(t.name)}</div>
-    <div class="meta">${escapeHtml(t.desc || 'Topic')}</div></div>`;
-const pojamCard = (p) => `<div class="sm-card-item" data-sm-go="pojam:${escapeAttr(p.id)}">
-    <div class="ttl">${escapeHtml(p.name)}</div>
-    <div class="meta">${p.bookCount ? p.bookCount + ' books' : 'Concept'}</div></div>`;
-
-function section(title, body) {
-  return `<div class="sm-section"><h3 class="sm-section-title">${title}</h3>${body}</div>`;
-}
+import { smGrid, bookCard, authorCard, topicCard, pojamCard, section, yearAuthor } from './shared.js';
+import { coverWrap } from '../lib/covers.js';
 
 // --- per-section content (composed by tabs below) ---------------------------
 function yourBooksSection() {
   const yourBooks = [...BOOKS].sort((a, b) => (b.year || 0) - (a.year || 0)).slice(0, 4);
   const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
-  const cards = yourBooks.map((b, i) => {
+  // Same card as the rest of the modal (title · author · designed cover), plus
+  // a reading-progress bar beneath the cover.
+  const cards = yourBooks.map((b) => {
     const pct = 10 + (hash(b.id) % 80); // stable mock 10–89%
-    return `<div class="sm-yb-card" data-sm-go="book:${escapeAttr(b.id)}">
-      <div class="sm-yb-cover c${i % 4}"></div>
-      <div class="sm-yb-body">
-        <div class="sm-yb-ttl">${escapeHtml(b.title)}</div>
-        <div class="sm-yb-prog">
-          <div class="sm-yb-bar"><div style="width:${pct}%"></div></div>
-          <div class="sm-yb-pct">${pct}% read</div>
-        </div>
+    const pagesRead = Math.round((b.pages || 0) * pct / 100);
+    return `<div class="bookcard sm-bookcard sm-yb-card" data-sm-go="book:${escapeAttr(b.id)}">
+      ${coverWrap(b)}
+      <div class="bc-meta">
+        <div class="bt">${escapeHtml(b.title)}</div>
+        <div class="ba">${yearAuthor(b)}</div>
+      </div>
+      <div class="sm-yb-prog">
+        <div class="sm-yb-bar"><div style="width:${pct}%"></div></div>
+        <span class="sm-yb-pct">${pagesRead} / ${b.pages} pages</span>
       </div>
     </div>`;
   }).join('');
   return `<div class="sm-section">
-    <h3 class="sm-section-title">Your books · reading now</h3>
-    <div class="sm-yb-grid">${cards}</div>
+    <h3 class="sm-section-title">Your books</h3>
+    <div class="sm-grid">${cards}</div>
   </div>`;
 }
 const booksSection = () => smGrid(BOOKS.slice(0, 12), bookCard);
@@ -64,9 +47,7 @@ const authorsSection = () => section('Authors', smGrid(AUTHORS.slice(0, 12), aut
 const conceptsSection = () => section('Concepts', smGrid(POJMOVI.slice(0, 12), pojamCard));
 
 // Emoji glyphs used as count icons across the modal lists.
-const BOOK_ICON_SVG   = `<span class="sm-emoji" aria-hidden="true">📚</span>`;
-const VIDEO_ICON_SVG  = `<span class="sm-emoji" aria-hidden="true">📹</span>`;
-const AUTHOR_ICON_SVG = `<span class="sm-emoji" aria-hidden="true">✍🏻</span>`;
+const BOOK_ICON_SVG = `<span class="sm-emoji" aria-hidden="true">📚</span>`;
 
 const sortByName = (arr) => [...arr].sort((a, b) => a.name.localeCompare(b.name));
 const bookCountOf = (it) => it.bookCount != null ? it.bookCount : (it.bookIds?.length || 0);
@@ -84,21 +65,14 @@ function categoryLogoHTML(topicId, helpers) {
   return `<span class="sm-row-av sm-row-av-topic">${logo}</span>`;
 }
 
-// Row renderers — used by both full and "top N" lists.
+// Row renderers — used by both full and "top N" lists. A single book count
+// keeps the row quiet; the videos/authors tallies added clutter without payoff.
 function categoryRowHTML(t, ctx) {
-  const books   = t.bookIds?.length || 0;
-  const videos  = VIDEOS.filter((v) => v.topicIds?.includes(t.id)).length;
-  const authors = new Set(
-    BOOKS.filter((b) => b.topicIds?.includes(t.id)).flatMap((b) => b.authorIds || [])
-  ).size;
+  const books = t.bookIds?.length || 0;
   return `<button class="sm-cat-row" data-sm-go="topic:${escapeAttr(t.id)}">
     ${categoryLogoHTML(t.id, ctx?.helpers)}
     <span class="ttl">${escapeHtml(t.name)}</span>
-    <span class="counts">
-      <span class="count" title="${books} books"><span class="n">${books}</span>${BOOK_ICON_SVG}</span>
-      <span class="count" title="${videos} videos"><span class="n">${videos}</span>${VIDEO_ICON_SVG}</span>
-      <span class="count" title="${authors} authors"><span class="n">${authors}</span>${AUTHOR_ICON_SVG}</span>
-    </span>
+    <span class="count" title="${books} books"><span class="n">${books}</span>${BOOK_ICON_SVG}</span>
   </button>`;
 }
 function singleCountRowHTML(it, goKind, ctx) {
@@ -130,13 +104,11 @@ function conceptsChipsExplore() {
 
 // --- tab renderers (empty mode) ---------------------------------------------
 function explore(ctx) {
-  // Explore = curated overview: 8 trending books, top 5 popular categories &
-  // authors (by book count), plus concepts as quoted pill chips.
+  // Explore = your books in progress + a trending books grid. (Popular
+  // categories/authors and concept chips were removed for now — the helpers
+  // remain below in case they return.)
   return yourBooksSection()
-    + section('Books',              smGrid(BOOKS.slice(0, 8), bookCard))
-    + section('Popular Categories', categoriesTopList(5, ctx))
-    + section('Popular Authors',    authorsTopList(5, ctx))
-    + conceptsChipsExplore();
+    + section('Bestsellers', smGrid(BOOKS.slice(0, 12), bookCard));
 }
 const books = () => booksSection();
 const categories = (ctx) => categoriesList(ctx);
@@ -154,36 +126,48 @@ export const TABS = [
 
 export const tabRenderers = { explore, books, categories, authors };
 
+// Ranked matches across every type, highest score first. Shared by the results
+// list and the input ghost-text suggestion so the ghost's top hit always equals
+// the first row the user sees.
+export function rankResults(q) {
+  const ql = (q || '').trim();
+  if (!ql) return [];
+  return [
+    ...BOOKS  .map((b) => ({ kind: 'book',   item: b, s: scoreBook(b, ql) })),
+    ...AUTHORS.map((a) => ({ kind: 'author', item: a, s: scoreAuthor(a, ql) })),
+    ...TOPICS .map((t) => ({ kind: 'topic',  item: t, s: scoreTopic(t, ql) })),
+    ...POJMOVI.map((p) => ({ kind: 'pojam',  item: p, s: scorePojam(p, ql) })),
+  ].filter((x) => x.s > 0).sort((a, b) => b.s - a.s);
+}
+
 // --- searching mode (query non-empty): flat list ranked by score ------------
 export function searchingView(ctx, q) {
   const { bookAuthors, bookCoverImg, initials, CATEGORY_LOGOS } = ctx.helpers;
   const ql = q.trim();
 
-  const allScored = [
-    ...BOOKS  .map((b) => ({ kind: 'book',   item: b, s: scoreBook(b, ql) })),
-    ...AUTHORS.map((a) => ({ kind: 'author', item: a, s: scoreAuthor(a, ql) })),
-    ...TOPICS .map((t) => ({ kind: 'topic',  item: t, s: scoreTopic(t, ql) })),
-    ...POJMOVI.map((p) => ({ kind: 'pojam',  item: p, s: scorePojam(p, ql) })),
-  ].filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 6);
+  // Drop pure-noise matches: every item carries a small popularity prior (~0.5–1)
+  // even with no textual hit, so filter below that floor and keep the top 6.
+  const entities = rankResults(ql).filter((r) => r.s > 1.1).slice(0, 6);
 
-  // Two trailing rows: (7) "Search for query" → SRP, (8) "Ask AI about query" → AI.
-  // The query is carried in a separate data-sm-q attribute so colons inside the
-  // query don't confuse the smGo parser.
-  const trailingRows = `
-    <div class="sm-row sm-row-search" data-sm-go="search" data-sm-q="${escapeAttr(ql)}">
-      <div class="sm-rico search">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      </div>
-      <div class="sm-rmain">
-        <div class="sm-rtitle">${escapeHtml(ql)}</div>
-      </div>
-    </div>
-    <div class="sm-row sm-row-search" data-sm-go="askai" data-sm-q="${escapeAttr(ql)}">
-      <div class="sm-rico ai">✦</div>
-      <div class="sm-rmain">
-        <div class="sm-rtitle">Ask AI about "${escapeHtml(ql)}"</div>
-      </div>
-    </div>`;
+  // Score the two actions on the SAME scale as entity matches, so their position
+  // reflects how well the query matched rather than always sitting at the bottom:
+  //   • Ask AI dominates when the query reads like a question; otherwise low.
+  //   • Search (full SRP) leads when nothing matched, sinks behind a strong or
+  //     clearly-dominant result, and lands mid-list when results are ambiguous.
+  // Both actions are always included so they're reachable regardless of position.
+  const top = entities[0]?.s || 0;
+  const second = entities[1]?.s || 0;
+  const isQuestion = isAskAIIntent(ql);
+  const strong = top >= 8 || (top > 0 && top >= second * 1.4 + 2);
+
+  const aiScore = isQuestion ? top + 6.5 : 0.5;
+  const searchScore = top <= 0 ? 6 : strong ? 0.6 : top * 0.55;
+
+  const ranked = [
+    ...entities.map((r) => ({ type: r.kind, item: r.item, score: r.s })),
+    { type: 'search', score: searchScore },
+    { type: 'askai',  score: aiScore },
+  ].sort((a, b) => b.score - a.score);
 
   const titleFor = { book: r => r.item.title, author: r => r.item.name, topic: r => r.item.name, pojam: r => r.item.name };
   const metaFor = {
@@ -211,20 +195,32 @@ export function searchingView(ctx, q) {
     pojam: () => '#',
   };
 
-  // Autocomplete: up to 6 ranked results, then "Search for {q}" and "Ask AI" rows.
-  if (!allScored.length) {
-    return `<div class="sm-empty">No results for "${escapeHtml(ql)}"</div>
-      <div class="sm-list">${trailingRows}</div>`;
-  }
-
-  const rows = allScored.map((r) => `
-    <div class="sm-row kind-${r.kind}" data-sm-go="${r.kind}:${escapeAttr(r.item.id)}">
-      <div class="sm-rico ${r.kind}">${iconFor[r.kind](r)}</div>
-      <div class="sm-rmain">
-        <div class="sm-rtitle">${escapeHtml(titleFor[r.kind](r))}</div>
-        <div class="sm-rmeta">${escapeHtml(metaFor[r.kind](r))}</div>
+  const searchRow = `
+    <div class="sm-row sm-row-search" data-sm-go="search" data-sm-q="${escapeAttr(ql)}">
+      <div class="sm-rico search">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       </div>
-    </div>`).join('');
+      <div class="sm-rmain"><div class="sm-rtitle">${escapeHtml(ql)}</div></div>
+    </div>`;
+  const aiRow = `
+    <div class="sm-row sm-row-search" data-sm-go="askai" data-sm-q="${escapeAttr(ql)}">
+      <div class="sm-rico ai">✦</div>
+      <div class="sm-rmain"><div class="sm-rtitle">Ask AI about "${escapeHtml(ql)}"</div></div>
+    </div>`;
+  const entityRow = (r) => `
+    <div class="sm-row kind-${r.type}" data-sm-go="${r.type}:${escapeAttr(r.item.id)}">
+      <div class="sm-rico ${r.type}">${iconFor[r.type](r)}</div>
+      <div class="sm-rmain">
+        <div class="sm-rtitle">${escapeHtml(titleFor[r.type](r))}</div>
+        <div class="sm-rmeta">${escapeHtml(metaFor[r.type](r))}</div>
+      </div>
+    </div>`;
 
-  return `<div class="sm-list">${rows}${trailingRows}</div>`;
+  const rows = ranked.map((r) =>
+    r.type === 'search' ? searchRow :
+    r.type === 'askai'  ? aiRow :
+                          entityRow(r)
+  ).join('');
+
+  return `<div class="sm-list">${rows}</div>`;
 }

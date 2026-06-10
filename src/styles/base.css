@@ -603,7 +603,7 @@
   .ai-msg.bot .body ul{margin:6px 0 14px;padding-left:20px;line-height:1.6}
 
   /* book recommendation card */
-  .ai-recs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:8px 0 18px}
+  .ai-recs{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:16px;margin:10px 0 18px}
   .ai-rec{display:flex;gap:12px;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
   .ai-rec:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(15,110,91,.08)}
   .ai-rec .ai-cv{width:46px;aspect-ratio:3/4;border-radius:2px;flex-shrink:0;
@@ -1877,3 +1877,78 @@
   @media (max-width: 540px){
     .mn-footer-cols{grid-template-columns:1fr}
   }
+
+  /* ===== Reference-style book card (modal only): cover on top, meta below ===== */
+  .sm-bookcard{cursor:pointer}
+  /* Only the cover lifts on hover — keep the card/text in place (overrides the
+     inherited .bookcard:hover lift). */
+  .sm-bookcard:hover{transform:none}
+  .sm-bookcard .bc-meta{margin:10px 0 0}
+  .sm-bookcard .bc-meta .bt{
+    font-family:var(--font-sans); color:var(--ink); font-weight:700;
+    font-size:14px; line-height:1.25; margin:0;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .sm-bookcard:hover .bc-meta .bt{text-decoration:none}
+  .sm-bookcard .bc-meta .ba{color:var(--muted); font-size:12.5px; margin-top:3px; font-family:var(--font-sans);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+  .bc-cover-wrap{position:relative}
+  /* Book-opening hover (desktop): the cover is hinged on its left spine and
+     swings open, revealing an inside "page" with a short description. */
+  .sm-bookcard .bc-cover-wrap{perspective:1300px}
+  .sm-bookcard .bcover{position:relative;z-index:1;transform-origin:left center;backface-visibility:hidden;
+    transition:transform .55s cubic-bezier(.2,.7,.2,1), box-shadow .55s}
+  .sm-bookcard .bc-inside{position:absolute;inset:0;z-index:0;overflow:hidden;
+    border-radius:2px 11px 11px 2px;background:#f7f4ec;color:#3c4043;padding:15px 15px 15px 17px;
+    display:flex;align-items:center;box-shadow:0 7px 16px rgba(0,0,0,.16),1px 2px 4px rgba(0,0,0,.10)}
+  .sm-bookcard .bc-inside p{margin:0;font-size:11.5px;line-height:1.55;
+    display:-webkit-box;-webkit-line-clamp:9;-webkit-box-orient:vertical;overflow:hidden}
+  @media (hover:hover){
+    .sm-bookcard:hover .bcover{transform:rotateY(-118deg);box-shadow:-8px 10px 22px rgba(0,0,0,.22)}
+  }
+
+  /* Designed cover, shaped like a real book: square bound left edge with a
+     spine groove, rounded right (fore-)edge, and a soft drop shadow. */
+  .bcover{position:relative; aspect-ratio:3/4; border-radius:2px 12px 12px 2px; overflow:hidden;
+    background:var(--cv,#37474F); color:var(--cfg,#fff); padding:15px 15px 13px 24px;
+    display:flex; flex-direction:column;
+    box-shadow:0 7px 16px rgba(0,0,0,.18), 1px 2px 4px rgba(0,0,0,.12);
+    transition:transform .15s, box-shadow .15s}
+  /* spine: a thin groove a few px in from the bound left edge */
+  .bcover::before{content:''; position:absolute; left:9px; top:0; bottom:0; width:2px; z-index:2;
+    background:rgba(0,0,0,.18); box-shadow:1px 0 0 rgba(255,255,255,.14)}
+  .bcover-img::before{display:none}
+  .bcover-h{display:flex; justify-content:space-between; align-items:center; gap:8px;
+    font-size:9.5px; letter-spacing:1.4px; text-transform:uppercase; font-weight:700; opacity:.85; z-index:1}
+  .bcover-t{margin-top:13px; font-family:var(--font-serif),Georgia,serif; font-weight:700;
+    font-size:18px; line-height:1.18; z-index:1;
+    display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden}
+  .bcover-m{position:absolute; right:-10px; bottom:-16px; line-height:0; opacity:.16; font-size:108px}
+  .bcover-m svg{width:128px; height:128px; display:block}
+  /* Real cover image fills the whole frame, using the cover's own 264×352 ratio */
+  .bcover-img{padding:0; background:transparent; aspect-ratio:264/352}
+  .bcover-img img{width:100%; height:100%; object-fit:cover; display:block}
+
+  /* MEAP sticker + ribbon badge, positioned over the cover */
+  .bc-cover-wrap .meap-sticker{position:absolute; bottom:12px; left:-4px;
+    background:#c0392b; color:#fff; font-weight:900; font-size:11px; padding:4px 10px;
+    letter-spacing:1.5px; transform:rotate(-3deg); box-shadow:2px 2px 4px rgba(0,0,0,.2); pointer-events:none; z-index:2}
+  .bc-badge{position:absolute; top:8px; left:8px; background:#f0a92b; color:#1a1a1a;
+    padding:3px 9px; font-size:9px; font-weight:800; letter-spacing:.6px; border-radius:3px; z-index:2; pointer-events:none}
+
+  /* Home recent-releases grid keeps 5 across, then 3 on narrow */
+  .mn-cover-row{align-items:start}
+  @media (max-width:760px){ .mn-cover-row{grid-template-columns:repeat(2,1fr)} }
+
+  /* ===== Minimal, floating scrollbars (no track box) ===== */
+  *{scrollbar-width:thin; scrollbar-color:#d2d4d8 transparent}
+  ::-webkit-scrollbar{width:11px; height:11px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#d2d4d8; border-radius:999px;
+    border:3px solid transparent; background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#b6b9bf; background-clip:content-box}
+  ::-webkit-scrollbar-corner{background:transparent}
+  /* The recent-search chip strip scrolls by wheel/drag — hide its scrollbar */
+  .sm-chips{scrollbar-width:none}
+  .sm-chips::-webkit-scrollbar{display:none}

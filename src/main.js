@@ -6,6 +6,7 @@ import './styles/search-modal.css';
 import { TOPICS, AUTHORS, POJMOVI, VIDEOS, BOOKS } from './data/index.js';
 import { norm, tokens, highlight, scoreBook, scoreAuthor, scorePojam, scoreVideo, scoreTopic, searchAll, isAskAIIntent } from './lib/search.js';
 import { escapeHtml, escapeAttr } from './lib/dom.js';
+import { coverWrap } from './lib/covers.js';
 import { initSearchModal } from './search-modal/index.js';
 
 // Assigned once initSearchModal runs (end of file); used by the search-trigger handlers.
@@ -247,7 +248,7 @@ function __OLD_RENDER_HOME_UNUSED(){
   const meap = [...BOOKS].filter(b=>b.year>=2024).slice(0,10);
   const bestsellers = [...BOOKS].sort((a,b)=>b.price-a.price).slice(0,10);
   const dotd = BOOKS.find(b=>b.id==='hands-on-ml') || BOOKS[0];
-  const featuredAuthor = AUTHORS.find(a=>a.id==='matthes');
+  const featuredAuthor = AUTHORS.find(a=>a.id==='raschka') || AUTHORS[0];
   const featuredAuthorBooks = featuredAuthor.bookIds.map(id=>BOOKS.find(x=>x.id===id)).filter(Boolean);
 
   const categories = [
@@ -1173,14 +1174,16 @@ function resetAiThread(){ aiThread = [] }
 /* ----- Helpers: render UI blocks ----- */
 function aiRecsBlock(books, heading){
   if(!books.length) return '';
+  // Same vertical book card as the rest of the modal (designed/real cover on
+  // top, title + year · author below).
   return `${heading ? `<h4>${heading}</h4>` : ''}
     <div class="ai-recs">
       ${books.map(b => `
-        <div class="ai-rec" onclick="goBook('${b.id}')">
-          <div class="ai-cv ${coverFor(b)}"></div>
-          <div class="ai-meta">
-            <div class="ai-h">${escapeHtml(b.title)}</div>
-            <div class="ai-m">${bookAuthors(b)} · ${b.level} · ${b.year}</div>
+        <div class="bookcard sm-bookcard" onclick="goBook('${b.id}')">
+          ${coverWrap(b)}
+          <div class="bc-meta">
+            <div class="bt">${escapeHtml(b.title)}</div>
+            <div class="ba">${b.year} · ${escapeHtml(bookAuthors(b))}</div>
           </div>
         </div>`).join('')}
     </div>`;
@@ -1189,14 +1192,14 @@ function aiTopicChips(topics, label){
   if(!topics.length) return '';
   return `<h4>${label}</h4>
     <div class="ai-chips">
-      ${topics.map(t => `<span class="chip" onclick="goTopic('${t.id}')"># ${escapeHtml(t.name)}</span>`).join('')}
+      ${topics.map(t => `<span class="sm-concept-chip" onclick="goTopic('${t.id}')">${escapeHtml(t.name)}</span>`).join('')}
     </div>`;
 }
 function aiAuthorChips(authors, label){
   if(!authors.length) return '';
   return `<h4>${label}</h4>
     <div class="ai-chips">
-      ${authors.map(a => `<span class="chip" onclick="goAuthor('${a.id}')">👤 ${escapeHtml(a.name)}</span>`).join('')}
+      ${authors.map(a => `<span class="sm-concept-chip" onclick="goAuthor('${a.id}')">${escapeHtml(a.name)}</span>`).join('')}
     </div>`;
 }
 function aiBookLink(b){
@@ -2415,6 +2418,10 @@ const TOPIC_COVER_COLORS = {
   sec:     '#B71C1C', // Security red
 };
 function bookCoverImg(b){
+  // Prefer the real cover image (autocomplete rows, recent chips, etc.)
+  if(b.coverUrl){
+    return `<img class="cv-img cv-photo" src="${escapeAttr(b.coverUrl)}" alt="" loading="lazy">`;
+  }
   const topic = b.topicIds[0] || 'python';
   const bg = TOPIC_COVER_COLORS[topic] || '#5F6368';
   const fg = (bg === '#F0DB4F' || bg === '#00ADD8') ? '#1a1a1a' : '#fff';
